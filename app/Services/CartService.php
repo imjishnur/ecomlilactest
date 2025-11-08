@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Services;
-
+use App\Events\OrderPlaced;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
@@ -128,7 +128,7 @@ class CartService
 
         $orderItems[] = $orderItem;
     }
-
+    event(new OrderPlaced($order));
     $this->clear();
 
     return [
