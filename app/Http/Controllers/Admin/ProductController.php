@@ -19,7 +19,10 @@ class ProductController extends Controller
     public function index()
     {
         $products = $this->service->all();
-        return view('admin.products.index', compact('products'));
+        $totalOrders = \App\Models\Order::count();
+        $totalRevenue = \App\Models\Order::sum('total');
+
+        return view('admin.products.index', compact('products', 'totalOrders', 'totalRevenue'));
     }
 
     public function create()

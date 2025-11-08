@@ -8,6 +8,20 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Total Orders</h5>
+            <p class="fs-4">{{ $totalOrders }}</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Total Revenue</h5>
+            <p class="fs-4">${{ number_format($totalRevenue, 2) }}</p>
+        </div>
+    </div>
+</div>
 
                 @if (session('success'))
                     <div class="alert alert-success">
