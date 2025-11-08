@@ -8,8 +8,8 @@
 
     <h4>Order #{{ $order->id }}</h4>
     <p>Customer: {{ $order->customer_name }}</p>
-    
-    <p>Address: {{ $order->customer_address }}</p>
+  
+    <p>Address: {{ $order->customer_address ?? 'N/A' }}</p>
     <p>Status: {{ $order->status == 1 ? 'Pending' : 'Completed' }}</p>
 
     <table class="table table-bordered mt-4">
@@ -27,17 +27,9 @@
                 <td>{{ $item->product_name }}</td>
                 <td>{{ $item->quantity }}</td>
                 <td>${{ number_format($item->price, 2) }}</td>
-                <td>${{ number_format($item->subtotal, 2) }}</td>
+                <td>${{ number_format($item->price * $item->quantity, 2) }}</td>
             </tr>
             @endforeach
-            <tr>
-                <td colspan="3" class="text-end">Subtotal</td>
-                <td>${{ number_format($order->subtotal, 2) }}</td>
-            </tr>
-            <tr>
-                <td colspan="3" class="text-end">Discount</td>
-                <td>${{ number_format($order->discount, 2) }}</td>
-            </tr>
             <tr>
                 <td colspan="3" class="text-end"><strong>Total</strong></td>
                 <td><strong>${{ number_format($order->total, 2) }}</strong></td>

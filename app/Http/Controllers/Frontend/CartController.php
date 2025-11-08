@@ -5,32 +5,37 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\CartService;
-use App\Services\CouponService;
 
 class CartController extends Controller
 {
     protected CartService $cart;
-    protected CouponService $couponService;
 
-    public function __construct(CartService $cart, CouponService $couponService)
+    public function __construct(CartService $cart)
     {
         $this->cart = $cart;
-        $this->couponService = $couponService;
     }
 
     public function index()
     {
         $cartItems = $this->cart->getItems();
-        $total = $this->cart->getSubtotal();
-        $discount = $this->cart->getDiscount();
+        $total = $this->cart->getTotal();
 
-        return view('frontend.cart.index', compact('cartItems', 'total', 'discount'));
+        return view('frontend.cart.index', compact('cartItems', 'total'));
     }
 
     public function add(Request $request)
     {
-        $this->cart->add($request->product_id, $request->qty ?? 1);
-        return response()->json(['success' => true, 'message' => 'Product added to cart']);
+       $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'qty' => 'required|integer|min:1',
+        ]);
+
+        $productId = $request->input('product_id');
+        $qty = $request->input('qty');
+
+        $response = $this->cart->add($productId, $qty);
+
+        return response()->json($response);
     }
 
     public function remove(int $id)
@@ -39,44 +44,21 @@ class CartController extends Controller
         return response()->json(['success' => true, 'message' => 'Product removed from cart']);
     }
 
-    public function applyCoupon(Request $request)
+    public function checkout()
     {
-          $request->validate([
-        'code' => 'required|string|max:50',
-    ]);
-
-        $code = $request->code;
-        $subtotal = $this->cart->getSubtotal();
-
-        $result = $this->couponService->validate($code, $subtotal);
-
-        if ($result['success']) {
-            $this->cart->setCoupon($code, $result['discount']);
-        }
+        $result = $this->cart->checkout(); 
 
         return response()->json([
             'success' => $result['success'],
             'message' => $result['message'],
-            'total' => number_format($this->cart->getTotal(), 2),
-            'discount' => number_format($this->cart->getDiscount(), 2)
+            'order_id' => $result['order_id'] ?? null
         ]);
     }
 
-public function checkout()
-{
-    $result = $this->cart->checkout(); 
+    public function orderSuccess($orderId)
+    {
+        $order = \App\Models\Order::with('items.product')->findOrFail($orderId);
 
-    return response()->json([
-        'success' => $result['success'],
-        'message' => $result['message'],
-        'order_id' => $result['order_id'] ?? null
-    ]);
-}
-public function orderSuccess($orderId)
-{
-    $order = \App\Models\Order::with('items.product')->findOrFail($orderId);
-
-    return view('frontend.order.success', compact('order'));
-}
-
+        return view('frontend.order.success', compact('order'));
+    }
 }

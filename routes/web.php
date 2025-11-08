@@ -18,16 +18,14 @@ Route::prefix('cart')->group(function () {
     Route::post('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
 });
 
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    Route::resource('products', \App\Http\Controllers\Admin\ProductController::class)
-    ->except(['show']);
-Route::post('/admin/products/import', [\App\Http\Controllers\Admin\ProductController::class, 'import'])->name('products.import');
+Route::middleware(['auth', 'role:1'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('products', \App\Http\Controllers\Admin\ProductController::class)
+            ->except(['show']);
+    });
 
-    
-    Route::get('/products/download-template', [\App\Http\Controllers\Admin\ProductController::class, 'downloadTemplate'])
-    ->name('products.downloadTemplate');
-
-});
 Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
     return redirect()->route('admin.products.index');
 })->name('dashboard');

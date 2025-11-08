@@ -9,7 +9,7 @@ class OrderItem extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['order_id', 'product_id', 'quantity', 'price'];
+    protected $fillable = ['order_id',   'product_name', 'product_id', 'quantity', 'price'];
 
     public function order()
     {

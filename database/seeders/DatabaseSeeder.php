@@ -23,27 +23,26 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'password' => bcrypt('password'),
+             'role' => 1,
           
         ]);
-        $category = Category::create(['name' => 'Electronics']);
-        $color = Color::create(['name' => 'Red']);
-        $size = Size::create(['name' => 'M']);
+        User::factory()->create([
+            'name' => 'John Doe',
+            'email' => 'customer@example.com',
+            'password' => bcrypt('password'),
+            'role' => 2,
+        ]);
 
         Product::create([
             'name' => 'Sample Product',
-            'category_id' => $category->id,
-            'color_id' => $color->id,
-            'size_id' => $size->id,
+            'description' => 'test',
+           
             'qty' => 10,
             'price' => 199.99,
-            'image' => null, 
+            
         ]);
         
-    \App\Models\Coupon::create([
-        'code' => 'FIXED50',
-        'type' => 'fixed',
-        'value' => 50,
-    ]);
+
         // User::factory()->create([
         //     'name' => 'Test User',
         //     'email' => 'test@example.com',

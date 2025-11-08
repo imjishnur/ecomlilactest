@@ -2,24 +2,34 @@
 
 namespace App\Repositories;
 
-use App\Interfaces\ProductRepositoryInterface;
 use App\Models\Product;
 
-class ProductRepository implements ProductRepositoryInterface
+class ProductRepository
 {
-        public function allActive()
-    {
-        return Product::with(['category','color','size'])
-                    ->latest()
-                    ->paginate(10);
+public function allActive()
+{
+    $query = Product::query();
+
+    if ($min = request('min_price')) {
+        $query->where('price', '>=', $min);
     }
+
+    if ($max = request('max_price')) {
+        $query->where('price', '<=', $max);
+    }
+
+    if (request('in_stock')) {
+        $query->where('qty', '>', 0);
+    }
+
+    return $query->latest()->paginate(10)->withQueryString();
+}
+
 
     public function all()
     {
-       return Product::with(['category', 'color', 'size'])
-              ->latest()
-              ->paginate(10);
-
+        return Product::latest()
+            ->paginate(10);
     }
 
     public function find(int $id): ?Product

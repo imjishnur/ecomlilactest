@@ -2,89 +2,87 @@
 
 namespace App\Services;
 
+use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class CartService
 {
-    protected string $sessionKey = 'cart';
-    protected string $couponKey = 'coupon';
-
-    public function add(int $productId, int $qty = 1): void
+    public function add(int $productId, int $qty = 1): array
     {
-        $cart = Session::get($this->sessionKey, []);
-        if (isset($cart[$productId])) {
-            $cart[$productId] += $qty;
-        } else {
-            $cart[$productId] = $qty;
+        $product = Product::find($productId);
+
+        if (!$product) {
+            return ['success' => false, 'message' => 'Product not found'];
         }
-        Session::put($this->sessionKey, $cart);
+
+        if ($qty > $product->qty) {
+            return [
+                'success' => false,
+                'message' => "Cannot add more than available stock for {$product->name} (Available: {$product->qty})"
+            ];
+        }
+
+        $userId = Auth::id();
+
+        $cartItem = Cart::firstOrNew([
+            'user_id' => $userId,
+            'product_id' => $productId,
+        ]);
+
+        $cartItem->quantity = ($cartItem->quantity ?? 0) + $qty;
+        $cartItem->save();
+
+        return [
+            'success' => true,
+            'message' => "{$product->name} quantity updated in cart",
+            'qty' => $cartItem->quantity
+        ];
     }
 
-    public function remove(int $productId): void
+    public function remove(int $productId): array
     {
-        $cart = Session::get($this->sessionKey, []);
-        unset($cart[$productId]);
-        Session::put($this->sessionKey, $cart);
+        Cart::where('user_id', Auth::id())->where('product_id', $productId)->delete();
+
+        return ['success' => true, 'message' => 'Product removed from cart'];
     }
 
     public function getItems(): array
     {
-        $cart = Session::get($this->sessionKey, []);
-        $items = [];
+        $cartItems = Cart::with('product')->where('user_id', Auth::id())->get();
 
-        foreach ($cart as $productId => $qty) {
-            $product = Product::find($productId);
-            if (!$product) continue;
+        $items = [];
+        foreach ($cartItems as $cart) {
+            if (!$cart->product) continue;
 
             $items[] = [
-                'product' => $product,
-                'qty' => $qty,
-                'subtotal' => $product->price * $qty,
+                'product' => $cart->product,
+                'qty' => $cart->quantity,
+                'total' => $cart->product->price * $cart->quantity,
             ];
         }
 
         return $items;
     }
 
-    public function getSubtotal(): float
-    {
-        return collect($this->getItems())->sum('subtotal');
-    }
-
-    public function setCoupon(string $code, float $discount): void
-    {
-        Session::put($this->couponKey, [
-            'code' => $code,
-            'discount' => $discount,
-        ]);
-    }
-
-    public function getDiscount(): float
-    {
-        return Session::get($this->couponKey.'.discount', 0);
-    }
-
     public function getTotal(): float
     {
-        return $this->getSubtotal() - $this->getDiscount();
+        return collect($this->getItems())->sum('total');
     }
 
     public function clear(): void
     {
-        Session::forget([$this->sessionKey, $this->couponKey]);
+        Cart::where('user_id', Auth::id())->delete();
     }
 
     public function checkStock(): array
     {
-        $cartItems = $this->getItems();
-        foreach ($cartItems as $item) {
-            $product = $item['product'];
-            if ($product->qty < $item['qty']) {
+        foreach ($this->getItems() as $item) {
+            if ($item['product']->qty < $item['qty']) {
                 return [
                     'success' => false,
-                    'message' => "Insufficient stock for {$product->name}. Available: {$product->qty}"
+                    'message' => "Not enough stock for {$item['product']->name} (Available: {$item['product']->qty})"
                 ];
             }
         }
@@ -92,52 +90,60 @@ class CartService
         return ['success' => true];
     }
 
-
     public function checkout(): array
-    {
-        $cartItems = $this->getItems();
-        if (empty($cartItems)) {
-            return ['success' => false, 'message' => 'Cart is empty.'];
-        }
+{
+    $items = $this->getItems();
+    if (empty($items)) {
+        return ['success' => false, 'message' => 'Cart is empty'];
+    }
 
-        
-        $stockCheck = $this->checkStock();
-        if (!$stockCheck['success']) {
-            return $stockCheck; 
-        }
+    $stockCheck = $this->checkStock();
+    if (!$stockCheck['success']) {
+        return $stockCheck;
+    }
 
-        $subtotal = $this->getSubtotal();
-        $discount = $this->getDiscount();
-        $total = $this->getTotal();
-        $coupon = Session::get('coupon.code', null);
+    $total = $this->getTotal();
+    $user = Auth::user(); 
 
-        $order = Order::create([
-            'customer_name' => 'Test Name',
-            'customer_email' => 'test@example.com',
-            'customer_address' => 'Sample Address',
-            'subtotal' => $subtotal,
-            'discount' => $discount,
-            'total' => $total,
-            'coupon_code' => $coupon,
-            'status' => 1,
+    $order = Order::create([
+        'user_id' => Auth::id(),  
+        'customer_name' => $user ? $user->name : 'Guest',
+        'customer_email' => $user ? $user->email : null,
+        'total' => $total,
+        'status' => 1,
+    ]);
+
+    $orderItems = [];
+
+    foreach ($items as $item) {
+        $item['product']->decrement('qty', $item['qty']);
+
+        $orderItem = $order->items()->create([
+            'product_id' => $item['product']->id,
+            'product_name' => $item['product']->name,
+            'quantity' => $item['qty'],
+            'price' => $item['product']->price,
+            'total' => $item['total'],
         ]);
 
-        foreach ($cartItems as $item) {
-            $product = $item['product'];
-            $product->decrement('qty', $item['qty']);
-
-            $order->items()->create([
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'quantity' => $item['qty'],
-                'price' => $product->price,
-                'subtotal' => $item['subtotal'],
-            ]);
-        }
-
-        $this->clear();
-
-        return ['success' => true, 'message' => 'Checkout successful!', 'order_id' => $order->id];
+        $orderItems[] = $orderItem;
     }
+
+    $this->clear();
+
+    return [
+        'success' => true,
+        'message' => 'Checkout successful',
+        'order_id' => $order->id,
+        'order' => [
+            'id' => $order->id,
+            'customer_name' => $order->customer_name,
+            'customer_email' => $order->customer_email,
+            'total' => $order->total,
+            'status' => $order->status,
+            'items' => $orderItems
+        ]
+    ];
+}
 
 }

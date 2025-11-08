@@ -54,13 +54,7 @@ DB_PASSWORD=
 php artisan migrate --seed
 ```
 
-6. **Link storage folder (for images)**
-
-```bash
-php artisan storage:link
-```
-
-7. **Start the server**
+6. **Start the server**
 
 ```bash
 php artisan serve
@@ -75,23 +69,17 @@ Open in browser: `http://127.0.0.1:8000`
 | Area            | URL                                                      | Email               | Password  |
 |-----------------|----------------------------------------------------------|-------------------|----------|
 | Admin Dashboard | [http://127.0.0.1:8000/dashboard](http://127.0.0.1:8000/dashboard) | admin@example.com | password |
-| Frontend        | [http://127.0.0.1:8000/](http://127.0.0.1:8000/)       | -                 | -        |
+| Frontend        | [http://127.0.0.1:8000/](http://127.0.0.1:8000/)       | -       customercustomer@example.com          | password-        |
 
 ---
 
 
-## Sample Coupon Code for Testing
-
-| Code      | Type   | Discount       |
-|-----------|--------|---------------|
-| FIXED50   | Fixed  | 50  off  |
-
----
+-
 
 ## Quick One-Line Setup (Optional)
 
 ```bash
-composer install && cp .env.example .env && php artisan key:generate && php artisan migrate --seed && php artisan storage:link && php artisan serve
+composer install && cp .env.example .env && php artisan key:generate && php artisan migrate --seed &&  php artisan serve
 ```
 
 This will set up everything and start the server.
